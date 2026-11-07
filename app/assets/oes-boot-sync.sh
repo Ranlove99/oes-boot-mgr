@@ -21,7 +21,7 @@
 # ============================================================================
 set -u
 
-VERSION="1.1.19"
+VERSION="1.1.20"
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 export PATH
 

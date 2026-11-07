@@ -7,7 +7,8 @@
 **不需要 OES 设备**。核心逻辑与界面都可以在普通 Linux / macOS 上开发与测试。
 
 ```bash
-git clone <your-fork-url>
+git clone https://github.com/ranlove99/oes-boot-mgr.git
+# 或先 Fork 到自己的账号，再 clone 你的 fork
 cd oes-boot-mgr
 python3 -m pip install pytest        # 唯一的开发依赖
 make verify                          # 语法 + 一致性 + 单元测试
@@ -69,7 +70,9 @@ make verify     # = lint + check + test
 3. `make verify` 通过；
 4. `make build`（会下载 `fnpack`，产物在 `dist/`，不入库）；
 5. 在真实 OES 设备上安装并至少验证一次：首页结论、手动同步、`dpkg --audit` 干净、升级流程；
-6. 打 tag `vX.Y.Z`，把 `dist/*.fpk` 与 `.sha256` 传到 GitHub Release。
+6. 打 tag `vX.Y.Z`，把 `dist/*.fpk` 与 `.sha256` 传到 [GitHub Release](https://github.com/ranlove99/oes-boot-mgr/releases)。
+
+> `manifest` 的 `maintainer` / `maintainer_url`、`LICENSE` 版权人、README 署名须保持一致，`make check` 会校验；改作者时请三处一起改。
 
 ## 提交规范
 

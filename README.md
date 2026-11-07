@@ -1,9 +1,12 @@
 # OES 系统盘管家（oesboot）
 
-![version](https://img.shields.io/badge/version-1.1.19-blue)
+![version](https://img.shields.io/badge/version-1.1.20-blue)
 ![platform](https://img.shields.io/badge/platform-OES%20%7C%20OES%20Plus-orange)
 ![python](https://img.shields.io/badge/python-3.9%2B-green)
 ![license](https://img.shields.io/badge/license-MIT-lightgrey)
+[![author](https://img.shields.io/badge/author-ranlove99-181717)](https://github.com/ranlove99)
+
+> **作者 / 维护者：[ranlove99](https://github.com/ranlove99)** · 仓库：[github.com/ranlove99/oes-boot-mgr](https://github.com/ranlove99/oes-boot-mgr)
 
 给 **OES / OES Plus**（Amlogic 引导、eMMC + SSD）用的 fnOS 应用。把系统迁到 SSD 之后，**系统升级不再需要「切回 eMMC 再升一次」**。
 
@@ -28,7 +31,8 @@
 7. [开发](#7-开发)
 8. [常见问题](#8-常见问题)
 9. [风险声明](#9-风险声明)
-10. [许可证](#10-许可证)
+10. [上传到 GitHub](#10-上传到-github)
+11. [许可证](#11-许可证)
 
 ---
 
@@ -72,15 +76,15 @@ u-boot ──► eMMC p1 (fnEnv.txt + 内核) ──► rootdev=PARTUUID=xxxx-02
 
 ### 从 Release 安装（推荐）
 
-1. 到本仓库的 **Releases** 下载 `oesboot_<版本>_arm.fpk` 与同名的 `.sha256`；
-2. （可选）校验：`sha256sum -c oesboot_1.1.19.sha256`；
+1. 到 [Releases](https://github.com/ranlove99/oes-boot-mgr/releases) 下载 `oesboot_<版本>_arm.fpk` 与同名的 `.sha256`；
+2. （可选）校验：`sha256sum -c oesboot_1.1.20.sha256`；
 3. fnOS **应用中心 → 手动安装** → 选择 fpk；
 4. 安装向导保持「启用升级守护」打开（默认开启）。
 
 命令行安装：
 
 ```sh
-appcenter-cli install-fpk oesboot_1.1.19_arm.fpk
+appcenter-cli install-fpk oesboot_1.1.20_arm.fpk
 ```
 
 ### 从源码构建
@@ -88,10 +92,10 @@ appcenter-cli install-fpk oesboot_1.1.19_arm.fpk
 需要 bash、python3 和联网（首次会下载 `fnpack`）：
 
 ```bash
-git clone <仓库地址>
+git clone https://github.com/ranlove99/oes-boot-mgr.git
 cd oes-boot-mgr
 make verify                 # 建议先跑一遍
-make build                  # 产物：dist/oesboot_1.1.19_arm.fpk + .sha256
+make build                  # 产物：dist/oesboot_1.1.20_arm.fpk + .sha256
 ```
 
 `dist/` 不入库（见 `.gitignore`），发布时作为 Release 附件上传。
@@ -167,7 +171,7 @@ oes-boot-mgr/
 ├── .editorconfig                         # 编码与缩进
 ├── .gitattributes                        # 强制 LF（脚本会被设备直接解释）
 ├── .gitignore
-├── CHANGELOG.md                          # 24 个版本的更新日志
+├── CHANGELOG.md                          # 25 个版本的更新日志
 ├── CONTRIBUTING.md
 ├── LICENSE                               # MIT + 高风险工具附加提示
 ├── Makefile                              # test / lint / check / build / preview
@@ -280,6 +284,35 @@ CI 在 Python 3.9 / 3.11 / 3.12 上跑同样的一套检查。贡献流程、安
 - 本项目按「现状」提供（见 [LICENSE](LICENSE)），已在逻辑层做校验、备份与回滚，但不同批次 OES / OES Plus 的 u-boot 行为可能略有差异。**首次使用请先只做「同步」观察**，确认无误后再尝试迁移或布局修正。
 - fnOS 为飞牛私有系统，本项目为第三方社区工具，与其官方无关。
 
-## 10. 许可证
+## 10. 上传到 GitHub
 
-[MIT](LICENSE) · 更新日志见 [CHANGELOG.md](CHANGELOG.md) · 架构与排障见 [docs/](docs/README.md)
+本仓库已按可直接 push 的结构整理：根目录就是仓库根，`.gitignore` 排除构建产物，`.gitattributes` 强制 LF，首次提交已完成。
+
+```bash
+# 方式一：从导出的项目目录推送（已含 .git）
+cd oes-boot-mgr
+git remote add origin https://github.com/ranlove99/oes-boot-mgr.git
+git push -u origin main
+
+# 方式二：在 GitHub 网页新建空仓库（不要勾选初始化 README）后，用 SSH
+git remote add origin git@github.com:ranlove99/oes-boot-mgr.git
+git push -u origin main
+```
+
+若在别处重新克隆后推送，先确认 `git log --oneline -1` 与本地一致；仓库不含 `dist/`，发布包走 Releases：
+
+```bash
+make build                       # 生成 dist/oesboot_1.1.20_arm.fpk + .sha256
+# 在 GitHub 建 tag v1.1.20 的 Release，附上传这两个文件
+```
+
+| 说明 | 值 |
+| --- | --- |
+| 仓库 | `https://github.com/ranlove99/oes-boot-mgr` |
+| 默认分支 | `main` |
+| 作者 / 维护者 | `ranlove99`（与 `manifest` 的 `maintainer`、`LICENSE` 一致） |
+| 发布通道 | GitHub Releases，`dist/` 不入库 |
+
+## 11. 许可证
+
+[MIT](LICENSE) © 2026 [ranlove99](https://github.com/ranlove99) · 更新日志见 [CHANGELOG.md](CHANGELOG.md) · 架构与排障见 [docs/](docs/README.md)

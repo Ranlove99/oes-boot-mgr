@@ -79,6 +79,20 @@ badge_ver = m.group(1) if m else ""
 require(badge_ver == version,
         "README 版本徽章与 manifest 一致（%s / %s）" % (badge_ver or "缺失", version))
 
+# ------------------------------------------------------------ 1b. 作者署名
+author = field("maintainer")
+author_url = field("maintainer_url")
+require(bool(author) and not author.startswith("OES "),
+        "manifest maintainer 为具体作者：%s" % (author or "缺失"))
+require("github.com/%s" % author in author_url,
+        "maintainer_url 指向该作者的 GitHub：%s" % (author_url or "缺失"))
+require("Copyright (c) 2026 %s" % author in read(os.path.join(ROOT, "LICENSE")),
+        "LICENSE 版权人与 maintainer 一致")
+require("badge/author-%s" % author in read(os.path.join(ROOT, "README.md")),
+        "README 作者徽章与 maintainer 一致")
+require("github.com/%s/oes-boot-mgr" % author in read(os.path.join(ROOT, "README.md")),
+        "README 写死了仓库地址（无占位符）")
+
 # ------------------------------------------------------- 2. fpk 必需入口文件
 required = [
     "manifest", "ICON.PNG", "ICON_256.PNG",
