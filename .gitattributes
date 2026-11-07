@@ -1,0 +1,19 @@
+# 统一 LF。这里的脚本会被设备上的 /bin/sh、systemd 和 dpkg 直接解释，
+# CRLF 会让「看起来一样」的钩子配置解析失败（1.1.14 事故就是这么来的）。
+* text=auto eol=lf
+
+# 无扩展名但确实是 shell 脚本的文件，显式声明，避免被当成二进制
+cmd/*                     text eol=lf
+app/bin/oesboot            text eol=lf
+app/assets/oes-boot-sync.sh text eol=lf
+tools/build.sh             text eol=lf
+manifest                   text eol=lf
+wizard/install             text eol=lf
+
+# 二进制资源
+*.png  binary
+*.PNG  binary
+*.jpg  binary
+*.jpeg binary
+*.fpk  binary
+*.tgz  binary

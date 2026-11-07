@@ -1,0 +1,6 @@
+#!/bin/bash
+# 升级前：停掉 Web 服务（守护单元与 /usr/local/sbin 脚本独立存在，不受影响）
+set -u
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+"${SCRIPT_DIR}/main" stop
+exit 0

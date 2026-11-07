@@ -1,0 +1,23 @@
+[
+  {
+    "stepTitle": "安装确认",
+    "items": [
+      {
+        "type": "tips",
+        "helpText": "<p><b>本应用只适用于 OES / OES Plus（eMMC 引导 + /boot/fnEnv.txt）。</b></p><p>安装后会部署一个 systemd 守护：在开机、关机、升级重启前，把当前系统的内核 / initrd / dtb / fnEnv.txt 同步到 u-boot 真正读取的 eMMC 启动分区。这样系统跑在 SSD 上做 OTA 升级，也不会再出现「升级后失联、必须切回 eMMC 再升一次」。</p><p>守护只读写两个启动分区（FAT），不碰任何数据分区；可随时在应用内关闭或卸载。</p>"
+      },
+      {
+        "type": "switch",
+        "field": "wizard_guard_enabled",
+        "label": "安装后立即启用升级守护",
+        "initValue": "true"
+      },
+      {
+        "type": "switch",
+        "field": "wizard_auto_reboot",
+        "label": "误启动到 eMMC 时自动修复并重启回 SSD",
+        "initValue": "true"
+      }
+    ]
+  }
+]

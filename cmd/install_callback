@@ -1,0 +1,153 @@
+#!/bin/bash
+# ============================================================
+# 安装后初始化（应用文件已解压到 $TRIM_APPDEST）
+#   1) 部署升级守护（纯 shell，先落到当前系统，保证后续不依赖 python）
+#   2) 用 python 补装到备用系统的 rootfs
+#   3) 启动 Web 服务
+# ============================================================
+set -u
+
+APP_NAME="oesboot"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_DIR="${TRIM_APPDEST:-/var/apps/${APP_NAME}/target}"
+VAR_DIR="${TRIM_PKGVAR:-/var/apps/${APP_NAME}/var}"
+GUARD_SRC="${APP_DIR}/assets/oes-boot-sync.sh"
+CONF=/etc/oesboot.conf
+UNIT_DIR=/etc/systemd/system
+
+fail() {
+  echo "$1" > "${TRIM_TEMP_LOGFILE:-/dev/null}" 2>/dev/null || true
+  exit 1
+}
+
+[ -f "$GUARD_SRC" ] || fail "安装包不完整：缺少 assets/oes-boot-sync.sh"
+mkdir -p "$VAR_DIR"
+
+# ---- 向导参数 -------------------------------------------------------------
+ENABLED=1
+case "${wizard_guard_enabled:-true}" in false|0|no) ENABLED=0 ;; esac
+ROOTDEV="$(findmnt -n -o SOURCE / 2>/dev/null | head -1)"
+ROOTDISK="$(lsblk -dn -o PKNAME "$ROOTDEV" 2>/dev/null | head -1)"
+case "$ROOTDISK" in
+  mmcblk*) LOCK="follow" ;;   # 系统还在 eMMC：先跟随，不做惊喜切换
+  *)       LOCK="ssd" ;;      # 系统已在 SSD：锁定 SSD
+esac
+AUTO_REBOOT=1
+case "${wizard_auto_reboot:-true}" in false|0|no) AUTO_REBOOT=0 ;; esac
+
+# ---- 1) 当前系统：部署守护 ------------------------------------------------
+install -D -m 0755 "$GUARD_SRC" /usr/local/sbin/oes-boot-sync || fail "写入 /usr/local/sbin 失败"
+
+cat > "${UNIT_DIR}/oesboot-sync.service" <<'UNIT'
+[Unit]
+Description=OES boot partition guard (sync kernel/initrd/fnEnv)
+DefaultDependencies=no
+After=local-fs.target
+Before=shutdown.target umount.target
+ConditionPathExists=/usr/local/sbin/oes-boot-sync
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStartPre=-/usr/local/sbin/oes-boot-sync repair
+ExecStart=/usr/local/sbin/oes-boot-sync sync
+TimeoutStartSec=180
+Nice=10
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+
+cat > "${UNIT_DIR}/oesboot-shutdown-sync.service" <<'UNIT'
+[Unit]
+Description=OES boot partition guard (sync before shutdown)
+DefaultDependencies=no
+After=local-fs.target
+Before=shutdown.target umount.target
+ConditionPathExists=/usr/local/sbin/oes-boot-sync
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/oes-boot-sync sync
+TimeoutStartSec=120
+Nice=10
+
+[Install]
+WantedBy=shutdown.target
+UNIT
+
+cat > "${UNIT_DIR}/oesboot-check.service" <<'UNIT'
+[Unit]
+Description=OES boot partition guard (periodic check)
+After=local-fs.target
+ConditionPathExists=/usr/local/sbin/oes-boot-sync
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/sbin/oes-boot-sync sync
+Nice=10
+UNIT
+
+cat > "${UNIT_DIR}/oesboot-check.timer" <<'UNIT'
+[Unit]
+Description=Periodic OES boot partition check
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=10min
+AccuracySec=30s
+
+[Install]
+WantedBy=timers.target
+UNIT
+
+mkdir -p "${UNIT_DIR}/multi-user.target.wants" "${UNIT_DIR}/shutdown.target.wants" "${UNIT_DIR}/timers.target.wants"
+ln -sf "${UNIT_DIR}/oesboot-sync.service" "${UNIT_DIR}/multi-user.target.wants/oesboot-sync.service"
+ln -sf "${UNIT_DIR}/oesboot-shutdown-sync.service" "${UNIT_DIR}/shutdown.target.wants/oesboot-shutdown-sync.service"
+ln -sf "${UNIT_DIR}/oesboot-check.timer" "${UNIT_DIR}/timers.target.wants/oesboot-check.timer"
+
+# dpkg 安装完内核包后立即同步（不依赖正常关机流程）
+mkdir -p /etc/apt/apt.conf.d
+cat > /etc/apt/apt.conf.d/99oesboot-sync <<'APTCONF'
+// 由 OES 系统盘管家维护：内核包安装完成后立即同步引导分区
+DPkg::Post-Invoke { "/usr/local/sbin/oes-boot-sync sync >/dev/null 2>&1 || true"; };
+APTCONF
+
+mkdir -p /etc/dpkg/dpkg.cfg.d
+cat > /etc/dpkg/dpkg.cfg.d/99oesboot-sync <<'DPKGCONF'
+post-invoke "/usr/local/sbin/oes-boot-sync sync >/dev/null 2>&1 || true";
+DPKGCONF
+
+cat > "$CONF" <<CONF
+# OES 系统盘管家 —— 升级守护配置（安装时生成）
+ENABLED=${ENABLED}
+LOCK=${LOCK}
+AUTO_REPAIR=1
+AUTO_REBOOT=${AUTO_REBOOT}
+LOADER_PART=
+KEEP_PREV=1
+CONF
+
+systemctl daemon-reload >/dev/null 2>&1 || true
+systemctl enable oesboot-sync.service >/dev/null 2>&1 || true
+systemctl enable oesboot-shutdown-sync.service >/dev/null 2>&1 || true
+systemctl enable --now oesboot-check.timer >/dev/null 2>&1 || true
+/usr/local/sbin/oes-boot-sync sync >/dev/null 2>&1 || true
+
+# ---- 2) 备用系统：补装守护（失败不阻断安装）-------------------------------
+PYTHON_BIN=""
+for P in /var/apps/python312/target/bin /usr/bin /usr/local/bin; do
+  if [ -x "$P/python3" ]; then PYTHON_BIN="$P/python3"; break; fi
+done
+if [ -n "$PYTHON_BIN" ]; then
+  (cd "$APP_DIR" && "$PYTHON_BIN" cli.py guard install) >"${VAR_DIR}/guard-install.log" 2>&1 || true
+fi
+
+# ---- 3) 启动服务 ----------------------------------------------------------
+"${SCRIPT_DIR}/main" start
+RC=$?
+if [ $RC -ne 0 ]; then
+  echo "Web 服务启动失败，可用 SSH 执行 oesboot status 查看；守护已独立部署，不影响系统升级。" \
+    > "${TRIM_TEMP_LOGFILE:-/dev/null}" 2>/dev/null || true
+fi
+exit 0

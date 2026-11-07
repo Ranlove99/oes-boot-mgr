@@ -1,0 +1,21 @@
+#!/bin/bash
+# 升级后：把最新的守护脚本重新部署（含备用系统），再启动服务
+set -u
+APP_NAME="oesboot"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+APP_DIR="${TRIM_APPDEST:-/var/apps/${APP_NAME}/target}"
+VAR_DIR="${TRIM_PKGVAR:-/var/apps/${APP_NAME}/var}"
+
+[ -f "${APP_DIR}/assets/oes-boot-sync.sh" ] && \
+  install -D -m 0755 "${APP_DIR}/assets/oes-boot-sync.sh" /usr/local/sbin/oes-boot-sync 2>/dev/null
+
+PYTHON_BIN=""
+for P in /var/apps/python312/target/bin /usr/bin /usr/local/bin; do
+  if [ -x "$P/python3" ]; then PYTHON_BIN="$P/python3"; break; fi
+done
+if [ -n "$PYTHON_BIN" ]; then
+  (cd "$APP_DIR" && "$PYTHON_BIN" cli.py guard install) >"${VAR_DIR}/guard-install.log" 2>&1 || true
+fi
+
+"${SCRIPT_DIR}/main" start
+exit 0

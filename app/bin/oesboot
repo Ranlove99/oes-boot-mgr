@@ -1,0 +1,10 @@
+#!/bin/sh
+# oesboot 命令行入口（软链到 /usr/local/bin/oesboot）
+DIR=$(cd "$(dirname "$(readlink -f "$0")")/.." 2>/dev/null && pwd)
+[ -d "$DIR" ] || DIR=/var/apps/oesboot/target
+PY=""
+for P in /var/apps/python312/target/bin /usr/bin /usr/local/bin; do
+  if [ -x "$P/python3" ]; then PY="$P/python3"; break; fi
+done
+[ -n "$PY" ] || { echo "未找到 python3" >&2; exit 1; }
+exec "$PY" "$DIR/cli.py" "$@"

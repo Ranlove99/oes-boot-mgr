@@ -1,0 +1,33 @@
+#!/bin/bash
+# ============================================================
+# 安装前检查（在应用文件解压【之前】执行，不能检查 $TRIM_APPDEST 内容）
+# ============================================================
+set -u
+
+fail() {
+  echo "$1" > "${TRIM_TEMP_LOGFILE:-/dev/null}" 2>/dev/null || true
+  exit 1
+}
+
+# 1) 必须是 fnOS + 类 Debian 环境
+[ -f /etc/os-release ] || fail "无法识别系统环境（/etc/os-release 缺失）"
+
+# 2) 必须是 OES / OES Plus 这类 eMMC + Amlogic 引导结构的设备
+[ -f /boot/fnEnv.txt ] || fail "未找到 /boot/fnEnv.txt：本应用仅适用于 OES / OES Plus 等从 eMMC 引导的 fnOS 设备"
+ls /dev/mmcblk*p1 >/dev/null 2>&1 || fail "未找到 eMMC 启动分区（/dev/mmcblk*p1），本应用不适用于该设备"
+
+# 3) 运行依赖
+PYTHON_BIN=""
+for P in /var/apps/python312/target/bin /usr/bin /usr/local/bin; do
+  if [ -x "$P/python3" ]; then PYTHON_BIN="$P/python3"; break; fi
+done
+[ -n "$PYTHON_BIN" ] || fail "未找到 python3：请先在应用中心安装 Python 运行时（python312）后重试"
+
+for c in lsblk blkid findmnt mount; do
+  command -v "$c" >/dev/null 2>&1 || fail "缺少系统命令：$c（系统环境异常，无法安全读取引导）"
+done
+
+# 4) 不允许存在残留的异常状态
+[ -f /run/oes-boot-sync.lock ] && rm -f /run/oes-boot-sync.lock 2>/dev/null
+
+exit 0

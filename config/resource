@@ -1,0 +1,7 @@
+{
+  "usr-local-linker": {
+    "bin": ["bin/oesboot"],
+    "lib": [],
+    "etc": []
+  }
+}

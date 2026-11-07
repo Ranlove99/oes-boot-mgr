@@ -1,0 +1,6 @@
+#!/bin/bash
+# 配置变更后：重新加载守护单元，使新配置立即生效
+set -u
+systemctl daemon-reload >/dev/null 2>&1 || true
+systemctl restart oesboot-sync.service >/dev/null 2>&1 || true
+exit 0

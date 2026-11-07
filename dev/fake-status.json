@@ -1,0 +1,297 @@
+{
+ "generated_at": "2026-11-06 23:09:47",
+ "host": {
+  "hostname": "OES",
+  "kernel": "6.18.18.c944-trim",
+  "arch": "aarch64",
+  "version": "1.2.0503",
+  "uptime": "18342.51"
+ },
+ "chain": {
+  "root_dev": "/dev/sda2",
+  "root_partuuid": "0060e0e9-02",
+  "root_base": "0060e0e9",
+  "root_disk": "sda",
+  "root_on_emmc": false,
+  "boot_dir": "/boot",
+  "boot_part": "/dev/sda1",
+  "boot_base": "0060e0e9",
+  "ubootpart": "/dev/mmcblk1p1",
+  "loader_part": "/dev/mmcblk1p1",
+  "loader_base": "1b7c3f2a",
+  "loader_avail_kb": 186420,
+  "cmdline": "console=ttyAML0,115200 root=PARTUUID=0060e0e9-02 rootfstype=btrfs rootwait rw ubootpart=/dev/mmcblk1p1",
+  "boot_env": "...",
+  "boot_env_files": {
+   "kernelfile": "vmlinuz-6.18.18.c944-trim",
+   "initrdfile": "uInitrd-6.18.18.c944-trim",
+   "fdtfile": "amlogic/meson-g12b-s922x-oes-plus.dtb",
+   "rootdev": "PARTUUID=0060e0e9-02"
+  },
+  "loader_env": "...",
+  "loader_env_kernel": "vmlinuz-6.12.41-trim",
+  "loader_env_root": "PARTUUID=0060e0e9-02",
+  "loader_files": [
+   "vmlinuz-6.12.41-trim",
+   "uInitrd-6.12.41-trim"
+  ]
+ },
+ "disks": [
+  {
+   "name": "mmcblk1",
+   "path": "/dev/mmcblk1",
+   "model": "eMMC 8G",
+   "size": 7818182656,
+   "size_text": "7.3 GB",
+   "tran": "mmc",
+   "ro": false,
+   "emmc": true,
+   "is_system": false,
+   "partitions": [
+    {
+     "name": "mmcblk1p1",
+     "path": "/dev/mmcblk1p1",
+     "size": 268435456,
+     "size_text": "256.0 MB",
+     "fstype": "vfat",
+     "label": "BOOT",
+     "partuuid": "1b7c3f2a-01",
+     "base": "1b7c3f2a",
+     "mount": "",
+     "role": "loader",
+     "version": ""
+    },
+    {
+     "name": "mmcblk1p2",
+     "path": "/dev/mmcblk1p2",
+     "size": 5368709120,
+     "size_text": "5.0 GB",
+     "fstype": "btrfs",
+     "label": "fnOS",
+     "partuuid": "1b7c3f2a-02",
+     "base": "1b7c3f2a",
+     "mount": "",
+     "role": "fnos-root",
+     "version": "1.1.3105"
+    }
+   ]
+  },
+  {
+   "name": "sda",
+   "path": "/dev/sda",
+   "model": "XINKUI SSD 256G",
+   "size": 256060514304,
+   "size_text": "238.5 GB",
+   "tran": "sata",
+   "ro": false,
+   "emmc": false,
+   "is_system": true,
+   "partitions": [
+    {
+     "name": "sda1",
+     "path": "/dev/sda1",
+     "size": 268435456,
+     "size_text": "256.0 MB",
+     "fstype": "vfat",
+     "label": "BOOT",
+     "partuuid": "0060e0e9-01",
+     "base": "0060e0e9",
+     "mount": "/boot",
+     "role": "boot",
+     "version": ""
+    },
+    {
+     "name": "sda2",
+     "path": "/dev/sda2",
+     "size": 10653532160,
+     "size_text": "9.9 GB",
+     "fstype": "btrfs",
+     "label": "fnOS",
+     "partuuid": "0060e0e9-02",
+     "base": "0060e0e9",
+     "mount": "/",
+     "role": "root",
+     "version": "1.2.0503"
+    }
+   ]
+  }
+ ],
+ "guard": {
+  "installed": true,
+  "enabled": true,
+  "lock": "ssd",
+  "auto_repair": true,
+  "auto_reboot": false,
+  "loader_part": "",
+  "last_sync": {
+   "time": "2026-11-05 22:14:03",
+   "root_base": "0060e0e9",
+   "kernelfile": "vmlinuz-6.12.41-trim",
+   "initrdfile": "uInitrd-6.12.41-trim",
+   "loader": "/dev/mmcblk1p1",
+   "source": "/boot"
+  },
+  "log_tail": [
+   "2026-11-05 22:14:03 [oesboot] 检测到启动分区不一致：/boot=/dev/sda1，实际引导分区=/dev/mmcblk1p1（自动同步）",
+   "2026-11-05 22:14:03 [oesboot] 已备份原始引导配置：.oesboot/fnEnv.orig",
+   "2026-11-05 22:14:03 [oesboot] 同步启动文件：vmlinuz-6.12.41-trim",
+   "2026-11-05 22:14:04 [oesboot] OK: 引导分区已同步（rootdev=0060e0e9-02, kernel=vmlinuz-6.12.41-trim）"
+  ],
+  "conf_raw": ""
+ },
+ "support": {
+  "supported": true,
+  "reasons": []
+ },
+ "issues": [
+  {
+   "level": "error",
+   "code": "kernel-desync",
+   "title": "启动分区内核与系统不一致（升级后失联的直接原因）",
+   "detail": "系统 /boot 使用 vmlinuz-6.18.18.c944-trim，eMMC 引导分区仍是 vmlinuz-6.12.41-trim。下次重启会以旧内核加载新系统。"
+  }
+ ],
+ "upgrade": {
+  "verdict": "safe",
+  "ready": true,
+  "headline": "可以升级",
+  "summary": "现在去「系统设置 → 更新和还原」点升级即可。升级过程中不用做任何事：新内核写进 /boot 后会被自动搬到 eMMC 引导分区，系统自动重启也在同步之后。",
+  "checks": [
+   {
+    "key": "kernel",
+    "label": "引导分区内核与系统一致",
+    "ok": true,
+    "level": "ok",
+    "detail": "系统与引导分区均为 vmlinuz-6.18.18.c1151-trim",
+    "fix": ""
+   },
+   {
+    "key": "rootdev",
+    "label": "引导指向当前系统根分区",
+    "ok": true,
+    "level": "ok",
+    "detail": "rootdev=PARTUUID=14f31111-02，与当前根分区一致",
+    "fix": ""
+   },
+   {
+    "key": "fdt",
+    "label": "设备树一致",
+    "ok": true,
+    "level": "ok",
+    "detail": "amlogic/meson-g12b-a311d-oes.dtb",
+    "fix": ""
+   },
+   {
+    "key": "loader_space",
+    "label": "引导分区空间足够",
+    "ok": true,
+    "level": "ok",
+    "detail": "剩余 328 MB（新内核 + 旧内核保留约需 100 MB）",
+    "fix": ""
+   },
+   {
+    "key": "bootspace",
+    "label": "/boot 空间足够",
+    "ok": true,
+    "level": "ok",
+    "detail": "剩余 364 MB / 共 523 MB（OTA 解包内核与 initrd 一般需要 60~120 MB）",
+    "fix": ""
+   },
+   {
+    "key": "guard",
+    "label": "升级守护已部署",
+    "ok": true,
+    "level": "ok",
+    "detail": "守护已安装，已启用",
+    "fix": ""
+   },
+   {
+    "key": "hooks",
+    "label": "重启前会自动同步",
+    "ok": true,
+    "level": "ok",
+    "detail": "关机同步单元已就位；apt/dpkg 钩子已安装",
+    "fix": ""
+   }
+  ],
+  "failed": 0,
+  "hooks": {
+   "apt": true,
+   "dpkg": true,
+   "shutdown": true,
+   "watch": true,
+   "boot": true
+  },
+  "watch": {
+   "active": false,
+   "since": "2026-11-07 02:18:10",
+   "timer": "active",
+   "hits": 0,
+   "yielding": false,
+   "window": {
+    "active": false,
+    "since": "2026-11-07 02:18:10",
+    "age": 0,
+    "yields": 0,
+    "last": "2026-11-07 02:33:50",
+    "reason": "watch",
+    "boot_kernel": "vmlinuz-6.18.18.c1151-trim",
+    "loader_kernel": "vmlinuz-6.18.18.c1151-trim",
+    "same": "1"
+   },
+   "recent": []
+  },
+  "ota": {
+   "busy": false,
+   "stale": false,
+   "since": "",
+   "last": "",
+   "count": 0,
+   "pid": "",
+   "cmd": ""
+  },
+  "last_shutdown": {
+   "synced": false,
+   "time": "",
+   "kernelfile": "",
+   "matches": false,
+   "reason": ""
+  },
+  "window": {
+   "active": false,
+   "since": "2026-11-07 02:18:10",
+   "age": 0,
+   "yields": 0,
+   "last": "2026-11-07 02:33:50",
+   "reason": "watch",
+   "boot_kernel": "vmlinuz-6.18.18.c1151-trim",
+   "loader_kernel": "vmlinuz-6.18.18.c1151-trim",
+   "same": "1"
+  },
+  "generated_at": "2026-11-07 02:33:52",
+  "report": {
+   "exists": false,
+   "size": 0,
+   "time": "",
+   "age": -1,
+   "saved_path": "",
+   "saved_time": ""
+  },
+  "result": {
+   "state": "",
+   "note": "",
+   "since": "",
+   "finished": "",
+   "version_before": "",
+   "version_after": "",
+   "kernel_before": "",
+   "kernel_after": "",
+   "span": "",
+   "yields": "",
+   "fail_pkg": "",
+   "fail_line": "",
+   "has_report": false,
+   "report_size": 0
+  }
+ }
+}

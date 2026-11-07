@@ -1,0 +1,966 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OES 系统盘管家</title>
+<style>
+  :root{
+    --bg:#f4f6f8; --panel:#ffffff; --panel-2:#fafbfc; --text:#1a1f24; --muted:#6b7480;
+    --line:#e4e8ee; --accent:#1a8f7d; --accent-soft:#e6f4f1;
+    --ok:#14875f; --ok-soft:#e6f5ee; --warn:#b26a00; --warn-soft:#fdf1e0;
+    --err:#c0362c; --err-soft:#fbeceb; --shadow:0 1px 2px rgba(16,24,40,.06),0 1px 3px rgba(16,24,40,.08);
+    --radius:12px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#101315; --panel:#181c1f; --panel-2:#1e2327; --text:#e6eaee; --muted:#98a2ae;
+      --line:#282f35; --accent:#35b8a3; --accent-soft:#16302c;
+      --ok:#3fca91; --ok-soft:#12281f; --warn:#e0a44a; --warn-soft:#2b2114;
+      --err:#f07164; --err-soft:#2d1715; --shadow:none;
+    }
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);
+    font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Roboto,Helvetica,Arial,sans-serif;
+    font-size:14px;line-height:1.55;-webkit-font-smoothing:antialiased}
+  a{color:var(--accent)}
+  .wrap{max-width:1080px;margin:0 auto;padding:20px 20px 64px}
+  header{display:flex;align-items:center;gap:12px;margin:4px 0 18px}
+  .logo{width:38px;height:38px;border-radius:10px;background:linear-gradient(145deg,#1a8f7d,#0f5f54);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:700;font-size:15px;letter-spacing:-.5px}
+  header h1{font-size:17px;margin:0;font-weight:650;letter-spacing:.2px}
+  header .sub{color:var(--muted);font-size:12.5px;margin-top:1px}
+  header .spacer{flex:1}
+  .iconbtn{border:1px solid var(--line);background:var(--panel);color:var(--muted);border-radius:9px;
+    padding:7px 11px;cursor:pointer;font-size:13px}
+  .iconbtn:hover{color:var(--text);border-color:var(--accent)}
+  .banner{display:flex;gap:14px;align-items:flex-start;padding:16px 18px;border-radius:var(--radius);
+    background:var(--panel);border:1px solid var(--line);box-shadow:var(--shadow);margin-bottom:16px}
+  .banner .dot{width:9px;height:9px;border-radius:50%;margin-top:6px;flex:none}
+  .banner h2{margin:0 0 3px;font-size:15px;font-weight:650}
+  .banner p{margin:0;color:var(--muted);font-size:13px}
+  .tabs{display:flex;gap:4px;background:var(--panel);border:1px solid var(--line);padding:4px;
+    border-radius:11px;margin-bottom:16px;overflow:auto}
+  .tab{padding:7px 15px;border-radius:8px;cursor:pointer;color:var(--muted);font-size:13.5px;white-space:nowrap;
+    border:none;background:transparent;font-family:inherit}
+  .tab.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(2,minmax(0,1fr))}
+  @media (max-width:820px){.g2{grid-template-columns:minmax(0,1fr)}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:16px 18px}
+  .card h3{margin:0 0 12px;font-size:14px;font-weight:650;display:flex;align-items:center;gap:8px}
+  .card h3 .tag{margin-left:auto;font-size:11.5px;font-weight:500;color:var(--muted)}
+  .kv{display:grid;grid-template-columns:96px minmax(0,1fr);gap:7px 12px;font-size:13px}
+  .kv .k{color:var(--muted)}
+  .kv .v{word-break:break-all}
+  code,.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px}
+  .pill{display:inline-flex;align-items:center;gap:5px;padding:1.5px 9px;border-radius:999px;font-size:11.5px;font-weight:600}
+  .pill.ok{background:var(--ok-soft);color:var(--ok)}
+  .pill.warn{background:var(--warn-soft);color:var(--warn)}
+  .pill.err{background:var(--err-soft);color:var(--err)}
+  .pill.mute{background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+  .disk{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-bottom:10px}
+  .disk:last-child{margin-bottom:0}
+  .disk .head{display:flex;align-items:center;gap:9px;padding:10px 12px;background:var(--panel-2);
+    border-bottom:1px solid var(--line);font-size:13px}
+  .disk .head b{font-weight:650}
+  .disk .head .meta{color:var(--muted);font-size:12px}
+  .part{display:grid;grid-template-columns:88px 74px minmax(0,1fr) auto;gap:10px;align-items:center;
+    padding:8px 12px;font-size:12.5px;border-top:1px solid var(--line)}
+  .part:first-of-type{border-top:none}
+  .part .role{color:var(--muted)}
+  .btn{border:1px solid var(--accent);background:var(--accent);color:#fff;border-radius:9px;
+    padding:9px 16px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit}
+  .btn:hover{filter:brightness(1.06)}
+  @media (prefers-color-scheme: dark){ .btn{color:#05231e} .btn.ghost{color:var(--text)} }
+  .btn.ghost{background:transparent;color:var(--text);border-color:var(--line)}
+  .btn.ghost:hover{border-color:var(--accent);color:var(--accent)}
+  .btn.danger{background:var(--err);border-color:var(--err)}
+  .btn:disabled{opacity:.5;cursor:not-allowed;filter:none}
+  .row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .switch{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:11px 0;
+    border-bottom:1px solid var(--line)}
+  .switch:last-child{border-bottom:none}
+  .switch .t{font-size:13.5px}
+  .switch .d{color:var(--muted);font-size:12px;margin-top:2px;max-width:560px}
+  .toggle{position:relative;width:42px;height:24px;border-radius:999px;background:var(--line);
+    cursor:pointer;flex:none;transition:.18s;border:none;padding:0}
+  .toggle::after{content:"";position:absolute;top:2px;left:2px;width:20px;height:20px;border-radius:50%;
+    background:#fff;transition:.18s;box-shadow:0 1px 2px rgba(0,0,0,.2)}
+  .toggle.on{background:var(--accent)}
+  .toggle.on::after{transform:translateX(18px)}
+  .issues{display:flex;flex-direction:column;gap:8px}
+  .issue{display:flex;gap:10px;padding:10px 12px;border-radius:9px;background:var(--panel-2);
+    border:1px solid var(--line);font-size:13px}
+  .issue .bar{width:3px;border-radius:2px;flex:none}
+  .issue b{display:block;font-weight:600;margin-bottom:1px}
+  .issue span{color:var(--muted);font-size:12.5px}
+
+  /* 升级前检查清单 */
+  .chk{display:flex;gap:10px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13px}
+  .chk:last-child{border-bottom:none;padding-bottom:0}
+  .chk:first-child{padding-top:0}
+  .chk .ic{width:18px;height:18px;border-radius:50%;flex:none;display:flex;align-items:center;
+    justify-content:center;font-size:11px;font-weight:700;margin-top:1px}
+  .chk .ic.ok{background:var(--ok-soft);color:var(--ok)}
+  .chk .ic.warn{background:var(--warn-soft);color:var(--warn)}
+  .chk .ic.err{background:var(--err-soft);color:var(--err)}
+  .chk .txt{min-width:0;flex:1}
+  .chk .txt b{display:block;font-weight:600;font-size:13px}
+  .chk .txt span{color:var(--muted);font-size:12px;overflow-wrap:anywhere;line-height:1.5}
+  /* 宽屏两列：单列会让每行文字横跨一千多像素，读起来很累 */
+  @media (min-width:821px){
+    .chk-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));column-gap:36px}
+    .chk:nth-child(odd){padding-right:0}
+    .chk:nth-last-child(2):nth-child(odd){border-bottom:none}
+    .chk:last-child{border-bottom:none}
+  }
+
+  /* 升级监视激活态 */
+  .banner.live{border-color:var(--accent);background:var(--panel)}
+  .pulse{animation:pulse 1.9s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
+  .watchline{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--muted);
+    margin-top:8px;flex-wrap:wrap}
+  .watchline b{color:var(--text);font-weight:600}
+  .log{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:10px 12px;
+    max-height:260px;overflow:auto;font-size:12px;line-height:1.6;white-space:pre-wrap;word-break:break-all}
+  pre.report{background:var(--panel-2);border:1px solid var(--line);border-radius:9px;padding:12px;
+    max-height:460px;overflow:auto;font-size:11.5px;line-height:1.55}
+  .modal-mask{position:fixed;inset:0;background:rgba(10,14,18,.55);display:none;align-items:center;
+    justify-content:center;padding:20px;z-index:60}
+  .modal-mask.on{display:flex}
+  .modal{background:var(--panel);border-radius:14px;max-width:620px;width:100%;max-height:86vh;
+    overflow:auto;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+  .modal h3{margin:0 0 8px;font-size:16px}
+  .modal p{color:var(--muted);font-size:13px;margin:0 0 12px}
+  .modal ul{font-size:13px;color:var(--muted);margin:0 0 14px;padding-left:20px}
+  .modal li{margin-bottom:4px}
+  .modal code{background:var(--panel-2);padding:1px 5px;border-radius:4px;border:1px solid var(--line)}
+  input[type=text],select{width:100%;padding:9px 11px;border-radius:9px;border:1px solid var(--line);
+    background:var(--panel-2);color:var(--text);font-family:inherit;font-size:13.5px;outline:none}
+  input[type=text]:focus,select:focus{border-color:var(--accent)}
+  .hint{color:var(--muted);font-size:12px;margin-top:6px}
+  .prog{height:6px;border-radius:999px;background:var(--line);overflow:hidden;margin:12px 0}
+  .prog i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+  .empty{color:var(--muted);font-size:13px;text-align:center;padding:26px}
+  .foot{color:var(--muted);font-size:11.5px;text-align:center;margin-top:26px}
+  .banner.ok{border-color:var(--line)}
+  .banner.warn{border-color:var(--warn)}
+  .banner.err{border-color:var(--err)}
+
+  /* 防止长英文/长标题把 flex 容器撑宽（横向滚动条的唯一来源） */
+  .banner>div,header>div,.issue>div{min-width:0}
+  .banner h2,.banner p,.issue b,.issue span,.card p,.switch .d{overflow-wrap:anywhere}
+
+  /* ---------- 窄屏 / 手机 ---------- */
+  .kv.wide{grid-template-columns:110px 1fr;align-items:center}
+  @media (max-width:360px){
+    header .sub{display:none}
+    .kv,.kv.wide{grid-template-columns:68px minmax(0,1fr)}
+  }
+  @media (max-width:720px){
+    html{-webkit-text-size-adjust:100%}
+    .wrap{padding:14px 12px calc(48px + env(safe-area-inset-bottom))}
+    header{gap:10px;margin:2px 0 14px}
+    .logo{width:32px;height:32px;border-radius:9px;font-size:12px}
+    header h1{font-size:15.5px}
+    header .sub{font-size:11.5px;line-height:1.4}
+    .iconbtn{padding:8px 12px;font-size:12.5px;min-height:34px;flex:none;white-space:nowrap}
+
+    .banner{padding:13px 14px;gap:11px;border-radius:11px}
+    .banner h2{font-size:14px;text-wrap:pretty}
+    .banner p{font-size:12.5px}
+
+    .tabs{gap:2px;padding:7px 12px;margin:0 -12px 12px;border-radius:0;border-left:0;border-right:0;
+      position:sticky;top:0;z-index:30;background:var(--panel);box-shadow:0 1px 0 var(--line)}
+    .tab{flex:1;padding:8px 2px;font-size:12.5px;text-align:center}
+
+    .grid{gap:11px}
+    .card{padding:14px;border-radius:11px}
+    .card h3{font-size:13.5px;margin-bottom:10px;flex-wrap:wrap;gap:6px}
+    .card h3 .tag{font-size:11px}
+
+    .kv,.kv.wide{grid-template-columns:76px minmax(0,1fr);gap:6px 10px;font-size:12.5px}
+    .kv .v{line-height:1.5}
+
+    .part{grid-template-columns:minmax(0,1fr) auto;gap:3px 10px;padding:9px 12px;font-size:12px}
+    .part>span{min-width:0}
+    .part>span:nth-child(3){grid-column:1/-1;font-size:11.5px;line-height:1.75;overflow-wrap:anywhere}
+    .part>span:nth-child(4){grid-column:1/-1;font-size:11px;overflow-wrap:anywhere}
+    .part>span:empty{display:none}
+
+    .btn{padding:11px 16px;min-height:44px;border-radius:10px;font-size:13.5px}
+    .row{gap:8px}
+    .row>.btn{flex:1 1 auto}
+    .btn:active{transform:scale(.98)}
+
+    .switch{padding:12px 0;gap:12px;align-items:flex-start}
+    .switch .t{font-size:13.5px}
+    .switch .d{font-size:11.5px;line-height:1.5;margin-top:3px}
+    .switch>select{width:104px;flex:none;font-size:13px;min-height:38px;padding:6px 8px}
+
+    .issue{font-size:12.5px;padding:10px;gap:9px}
+    .issue b{font-size:12.5px;text-wrap:pretty}
+    .issue span{font-size:11.5px;line-height:1.5}
+    .log{max-height:210px;font-size:11px;padding:9px 10px}
+    pre.report{max-height:56vh;font-size:10.5px;padding:10px}
+
+    input[type=text],select{font-size:16px;padding:11px 12px}
+    .hint{font-size:11.5px}
+
+    .modal-mask{padding:0;align-items:flex-end}
+    .modal{width:100%;max-width:none;max-height:90vh;border-radius:16px 16px 0 0;
+      padding:18px 16px calc(16px + env(safe-area-inset-bottom))}
+    .modal h3{font-size:15.5px}
+    .modal p,.modal ul{font-size:12.5px}
+    .modal .row>.btn{flex:1}
+
+    .empty{padding:20px;font-size:12.5px}
+    .card h3{min-width:0}
+    .foot{font-size:11px;margin-top:20px;line-height:1.6}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">OES</div>
+    <div>
+      <h1>OES 系统盘管家</h1>
+      <div class="sub">eMMC / SSD 双系统引导管理 · 升级不断连</div>
+    </div>
+    <div class="spacer"></div>
+    <button class="iconbtn" id="btn-refresh">刷新</button>
+  </header>
+
+  <div class="banner" id="banner">
+    <div class="dot" style="background:var(--muted)"></div>
+    <div><h2>正在读取设备状态…</h2><p>请稍候</p></div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab on" data-tab="overview">概览</button>
+    <button class="tab" data-tab="guard">升级守护</button>
+    <button class="tab" data-tab="migrate">系统转移</button>
+    <button class="tab" data-tab="diag">诊断</button>
+  </div>
+
+  <div id="view-overview" class="view"></div>
+  <div id="view-guard" class="view" style="display:none"></div>
+  <div id="view-migrate" class="view" style="display:none"></div>
+  <div id="view-diag" class="view" style="display:none"></div>
+
+  <div class="foot">OES 系统盘管家 v1.1.19 · 引导同步基于 fnEnv.txt，不修改任何数据分区</div>
+</div>
+
+<div class="modal-mask" id="modal">
+  <div class="modal" id="modal-body"></div>
+</div>
+
+<script>
+const state = { info:null, tab:'overview', job:null, diag:'', disks:[] };
+const $ = (s, r=document) => r.querySelector(s);
+const esc = (s) => String(s==null?'':s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+/* 统一网关不会剥前缀，页面可能挂在 /app/oesboot 或 /app/oesboot/ 下 */
+const API_BASE = (function(){
+  let p = location.pathname;
+  p = p.replace(/[^\/]*\.[^\/]*$/, '');
+  if(!p.endsWith('/')) p += '/';
+  return p;
+})();
+
+async function api(path, opts){
+  const res = await fetch(API_BASE + 'api/' + path, Object.assign({headers:{'Content-Type':'application/json'}}, opts||{}));
+  const data = await res.json().catch(()=>({ok:false,error:'响应解析失败'}));
+  if(!res.ok || data.ok===false) throw new Error(data.error || ('HTTP ' + res.status));
+  return data.data;
+}
+const get = (p) => api(p);
+const post = (p, body) => api(p, {method:'POST', body: JSON.stringify(body||{})});
+
+function fmtTime(ts){ if(!ts) return '-'; const d=new Date(ts*1000); return d.toLocaleString('zh-CN',{hour12:false}); }
+
+/* ---------------- 概览 ---------------- */
+function watchActive(){
+  const up = state.info && state.info.upgrade;
+  return !!(up && up.watch && up.watch.active);
+}
+
+/* 首屏结论：这里必须能直接回答"我现在能不能点升级" */
+function renderBanner(){
+  const i = state.info;
+  if(!i){ return; }
+  const up = i.upgrade || {};
+  const banner = $('#banner');
+  if(!up.verdict){
+    const worst = (i.issues||[]).some(x=>x.level==='error') ? 'err' : ((i.issues||[]).some(x=>x.level==='warn')?'warn':'ok');
+    const main = (i.issues||[]).find(x=>x.level===(worst==='err'?'error':worst==='warn'?'warn':'ok')) || (i.issues||[])[0];
+    banner.className = 'banner ' + worst;
+    banner.innerHTML = `<div class="dot" style="background:var(--${worst==='ok'?'ok':worst})"></div>
+      <div><h2>${esc(main?main.title:'')}</h2><p>${esc(main?main.detail:'')}</p></div>`;
+    return;
+  }
+
+  const w = up.watch || {};
+  const ota = up.ota || {};
+  const win = w.window || {};
+  // 两种让路：1.1.5 起窗口内无条件停手（yielding），1.1.4 只在检测到装包进程时停手
+  const holding = !!w.active && (!!w.yielding || !!ota.busy);
+  const res = up.result || {};
+  // 布局不对是「现在根本升不了」，优先级高于「上次失败」和「监视运行中」，
+  // 否则用户会看到绿色/黄色然后又一次点升级。
+  // dpkg 配置坏掉排最前：它一坏，装什么都是秒失败，其他项怎么修都白修。
+  const dpkgBad = (up.checks||[]).some(c=>c.key==='dpkgcfg' && !c.ok);
+  const layoutBad = (up.checks||[]).some(c=>c.key==='layout' && !c.ok && c.level==='error');
+  const failed = res.state === 'failed';
+  const v = dpkgBad ? 'dpkg'
+    : (layoutBad ? 'layout'
+    : (holding ? 'hold' : (failed ? 'failed' : (w.active ? 'live' : up.verdict))));
+  const cls = (up.verdict==='block') ? 'err' : (v==='live' ? 'live' : (v==='hold' ? 'live' : ((v==='failed'||up.verdict==='warn')?'warn':'ok')));
+  const dot = (up.verdict==='block') ? 'err' : (v==='live' || v==='hold' ? 'accent' : ((v==='failed'||up.verdict==='warn')?'warn':'ok'));
+  const title = v==='dpkg' ? 'dpkg 配置坏了 · 现在装什么都失败'
+    : v==='hold' ? '系统升级中 · 守护已主动让路'
+    : (v==='layout' ? up.headline
+    : (v==='failed' ? '上次升级没有生效 · 现场已自动留存'
+    : (v==='live' ? '升级守护已激活，可以点升级了' : up.headline)));
+  const desc = v==='dpkg'
+    ? 'dpkg 读不了自己的配置文件，每次装包都在解析阶段直接退出——所以升级会在 4 秒内报「安装失败」，新内核连解包都轮不到。点下面按钮自动修，不用重启。'
+    : (v==='hold'
+    ? '升级窗口内守护不挂载、不写入引导分区，把 eMMC 完全让给升级程序。升级结束或重启前会自动补一次同步，期间不需要任何操作。'
+    : (v==='layout' ? up.summary
+    : (v==='failed'
+      ? (res.note || '系统版本没有变化，这次升级没有生效。')
+        + (res.has_report ? ' 升级程序自己的日志已经归档，导出就能看到它报的错。' : '')
+      : (v==='live'
+        ? '正在监视 /boot：新内核写入后 20 秒内自动同步到引导分区，系统自动重启也在同步之后。升级过程中无需任何操作。'
+        : up.summary))));
+
+  let extra = '';
+  if(v==='hold'){
+    const n = w.yielding ? (win.yields||0) : (ota.count||0);
+    const since = w.yielding ? (win.since||'') : (ota.since||'');
+    extra = `<div class="watchline"><span class="pulse" style="width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block"></span>
+      <span>已让路 <b style="white-space:nowrap">${n} 次</b> · 引导分区零写入</span>${since?`<span>始于 ${esc(since.slice(11))}</span>`:''}</div>`;
+  }else if(v==='failed'){
+    const mins = Math.max(1, Math.round((parseInt(res.span,10)||0)/60));
+    const pkg = res.fail_pkg ? `<span>卡在 <b style="white-space:nowrap">${esc(res.fail_pkg)}</b></span>` : '';
+    extra = `<div class="watchline"><span style="width:7px;height:7px;border-radius:50%;background:var(--warn);display:inline-block"></span>
+      <span>版本 <b style="white-space:nowrap">${esc(res.version_before||'?')} → ${esc(res.version_after||'?')}</b> · 升级尝试持续 ${mins} 分钟</span>${pkg}${res.has_report?'<span>现场已归档</span>':''}</div>`;
+  }else if(v==='live'){
+    const hits = w.hits || 0;
+    extra = `<div class="watchline"><span class="pulse" style="width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block"></span>
+      <span>监视中 · 每 20 秒检查一次 · 已自动同步 <b style="white-space:nowrap">${hits} 次</b></span>${w.since?`<span>启动于 ${esc(w.since.slice(11))}</span>`:''}</div>`;
+  }
+
+  const showBtns = state.tab==='overview';
+  const btns = showBtns ? `<div class="row" id="banner-actions" style="margin-top:12px">${upActions(up)}</div>` : '';
+
+  banner.className = 'banner ' + cls;
+  banner.innerHTML = `<div class="dot ${v==='live'?'pulse':''}" style="background:var(--${dot})"></div>
+    <div><h2>${esc(title)}</h2><p>${esc(desc)}</p>${extra}${btns}</div>`;
+}
+
+function upActions(up){
+  const w = up.watch || {};
+  const ota = up.ota || {};
+  const res = up.result || {};
+  const rep = up.report || {};
+  const hasScene = !!(rep.exists || res.has_report);
+  const dpkgBad = (up.checks||[]).some(c=>c.key==='dpkgcfg' && !c.ok);
+  const layoutBad = (up.checks||[]).some(c=>c.key==='layout' && !c.ok);
+  const sceneBtn = hasScene
+    ? `<button class="btn ghost" onclick="downloadReport(1)">${rep.exists?'抓取并导出升级现场':'抓取升级现场'}</button>`
+    : '';
+  if(up.verdict==='block'){
+    if(dpkgBad){
+      return `<button class="btn" onclick="doDpkgFix()">修复 dpkg 配置</button>
+              <button class="btn ghost" onclick="switchTab('diag')">查看诊断</button>`;
+    }
+    return `<button class="btn" onclick="fixUpgrade()">一键修复</button>
+            <button class="btn ghost" onclick="switchTab('diag')">查看诊断</button>`;
+  }
+  if(ota.busy && w.active){
+    return sceneBtn + `<button class="btn ghost" style="flex:0 0 auto" onclick="switchTab('guard')">守护详情</button>`;
+  }
+  if(w.active){
+    // 监视期间不摆"结束"按钮：升级完重启后会自动结束，避免引导用户中途关掉
+    return sceneBtn + `<button class="btn ghost" style="flex:0 0 auto" onclick="switchTab('guard')">守护详情</button>`;
+  }
+  if(res.state==='failed'){
+    return `<button class="btn" onclick="downloadReport(1)">${rep.exists?'抓取并导出升级现场':'抓取升级现场'}</button>
+            <button class="btn ghost" onclick="startWatch()">再试一次</button>`;
+  }
+  // 布局不规范只提醒，不挡启动：它不会让装包当场失败，
+  // 挡住反而让人卡在"必须先修复→修复又修不了布局"的死循环里。
+  if(layoutBad){
+    return `<button class="btn" onclick="startWatch()">启动升级守护</button>
+            <button class="btn ghost" onclick="doHybrid()">先修布局</button>`;
+  }
+  return (hasScene?sceneBtn:'') + `<button class="btn" onclick="startWatch()">启动升级守护</button>
+          <button class="btn ghost" onclick="switchTab('guard')">守护设置</button>`;
+}
+
+function checkList(up){
+  return `<div class="chk-list">${(up.checks||[]).map(c=>`
+    <div class="chk">
+      <div class="ic ${c.ok?'ok':(c.level==='error'?'err':'warn')}">${c.ok?'✓':(c.level==='error'?'!':'·')}</div>
+      <div class="txt"><b>${esc(c.label)}</b><span>${esc(c.detail)}</span></div>
+    </div>`).join('')}</div>`;
+}
+
+function renderOverview(){
+  const i = state.info;
+  if(!i){ return; }
+  const c = i.chain, g = i.guard, up = i.upgrade || {};
+  const parts = [];
+  const levelOf = (lvl) => lvl==='error'?'err':(lvl==='warn'?'warn':'ok');
+
+  const supported = i.support && i.support.supported;
+
+  // 升级前检查（首屏最重要的一张卡）
+  if(up.checks){
+    parts.push(`<div class="card" style="margin-bottom:14px">
+      <h3>升级前检查
+        <span class="tag">${up.verdict==='safe'?'全部通过':(up.verdict==='warn'?`${up.failed} 项提醒`:'有阻塞项')}</span></h3>
+      ${checkList(up)}
+      ${up.last_shutdown && up.last_shutdown.synced ? `<p class="hint">上次重启前已同步：${esc(up.last_shutdown.time||'')}${up.last_shutdown.matches?'，kernel 一致':'，kernel 已被后续升级取代'}</p>`:''}
+    </div>`);
+  }
+
+  parts.push(`<div class="grid g2">
+    <div class="card">
+      <h3>当前系统 <span class="tag">${supported?(c.root_on_emmc?'运行在 eMMC':'运行在 SSD'):'未识别引导结构'}</span></h3>
+      <div class="kv">
+        <div class="k">系统版本</div><div class="v">${esc(i.host.version||'未知')}</div>
+        <div class="k">运行内核</div><div class="v mono">${esc(i.host.kernel)}</div>
+        <div class="k">根分区</div><div class="v mono">${esc(c.root_dev)} <span class="pill mute">${esc(c.root_partuuid||'-')}</span></div>
+        <div class="k">启动分区</div><div class="v mono">${esc(c.boot_part||'-')}${c.boot_part!==c.loader_part?'<span class="pill mute" style="margin-left:6px">内核由守护搬过去</span>':''}</div>
+        <div class="k">实际引导</div><div class="v mono">${esc(c.loader_part||'-')} <span class="pill mute">u-boot 读取</span></div>
+        <div class="k">主机名</div><div class="v">${esc(i.host.hostname)}</div>
+      </div>
+    </div>
+    <div class="card">
+      <h3>引导一致性 <span class="tag">${g.installed?(g.conf_enabled===false?'守护已关闭':(g.enabled?'守护运行中':'守护已停用')):'守护未安装'}</span></h3>
+      <div class="kv">
+        <div class="k">系统内核</div><div class="v mono">${esc(c.boot_env_files.kernelfile||'-')}</div>
+        <div class="k">引导内核</div><div class="v mono">${esc(c.loader_env_kernel||'-')}</div>
+        <div class="k">引导 rootdev</div><div class="v mono">${esc(c.loader_env_root||'-')}</div>
+        <div class="k">上次同步</div><div class="v">${esc(g.last_sync.time||'从未')}</div>
+        <div class="k">引导剩余</div><div class="v">${c.loader_avail_kb?(c.loader_avail_kb/1024).toFixed(0)+' MB':'未知'}</div>
+        <div class="k">锁定启动盘</div><div class="v">${esc({follow:'跟随当前系统',ssd:'SSD',emmc:'eMMC'}[g.lock]||g.lock)}</div>
+      </div>
+    </div>
+  </div>`);
+
+  // 问题清单（升级检查已覆盖"健康"结论时不再重复）
+  const issues = (i.issues||[]).filter(x => !(up.checks && x.code==='healthy'));
+  if(issues.length){
+    parts.push(`<div class="card" style="margin-top:14px">
+      <h3>其他检查项 <span class="tag">${issues.length} 项</span></h3>
+      <div class="issues">${issues.map(x=>`
+        <div class="issue"><div class="bar" style="background:var(--${levelOf(x.level)})"></div>
+          <div><b>${esc(x.title)}</b><span>${esc(x.detail)}</span></div></div>`).join('')}
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn ghost" onclick="doSync()" ${supported?'':'disabled'}>立即同步引导</button>
+        <button class="btn ghost" onclick="doRepair()" ${supported?'':'disabled'}>检查并修复</button>
+        <button class="btn ghost" onclick="switchTab('guard')">守护设置</button>
+      </div>
+    </div>`);
+  } else if(up.checks){
+    parts.push(`<div class="row" style="margin-top:14px">
+      <button class="btn ghost" onclick="doSync()" ${supported?'':'disabled'}>立即同步引导</button>
+      <button class="btn ghost" onclick="doRepair()" ${supported?'':'disabled'}>检查并修复</button>
+      <button class="btn ghost" onclick="switchTab('guard')">守护设置</button>
+    </div>`);
+  }
+
+  // 磁盘
+  parts.push(`<div class="grid g2" style="margin-top:14px">${i.disks.map(d=>`
+    <div class="card">
+      <h3>${d.emmc?'eMMC':'磁盘'} ${esc(d.name)} ${d.is_system?'<span class="pill ok">当前系统盘</span>':''}
+        <span class="tag">${esc(d.size_text)}</span></h3>
+      <div class="disk">
+        <div class="head"><b>${esc(d.model||'未知型号')}</b><span class="meta">${esc(d.tran||'')}</span></div>
+        ${d.partitions.length? d.partitions.map(p=>`
+          <div class="part">
+            <span class="mono">${esc(p.name)}</span>
+            <span class="mono" style="color:var(--muted)">${esc(p.size_text)}</span>
+            <span>${esc(p.fstype||'-')} ${p.label?'· '+esc(p.label):''}
+              <span class="pill mute" style="margin-left:6px">${roleName(p.role)}</span>
+              ${p.version?`<span class="pill ok" style="margin-left:4px">v${esc(p.version)}</span>`:''}</span>
+            <span class="mono" style="color:var(--muted)">${esc(p.mount||'')}</span>
+          </div>`).join('') : '<div class="part"><span></span><span></span><span style="color:var(--muted)">无分区</span><span></span></div>'}
+      </div>
+    </div>`).join('')}</div>`);
+
+  $('#view-overview').innerHTML = parts.join('');
+}
+
+function roleName(r){
+  return ({root:'根分区',boot:'启动分区',loader:'引导分区', 'fnos-root':'fnOS 系统', 'boot?':'可能的启动分区',unknown:'数据/其他'})[r] || r;
+}
+
+/* ---------------- 升级守护 ---------------- */
+function renderGuard(){
+  const i = state.info; if(!i) return;
+  const g = i.guard;
+  const up = i.upgrade || {};
+  const w = up.watch || {};
+  const ota = up.ota || {};
+  const win = w.window || {};
+  const holding = !!w.yielding || !!ota.busy;
+  const res = up.result || {};
+  const rep = up.report || {};
+  const resLabel = {success:'上次升级成功', failed:'上次升级失败', idle:'上次未执行'}[res.state] || '';
+  const hk = up.hooks || {};
+  const lockVal = g.lock || 'follow';
+  const dot = (ok) => `<div class="ic ${ok?'ok':'warn'}">${ok?'✓':'·'}</div>`;
+  $('#view-guard').innerHTML = `
+  <div class="grid g2">
+    <div class="card">
+      <h3>升级监视 <span class="tag">${holding?'让路中':(w.active?'监视中':'待命')}</span></h3>
+      <p style="color:var(--muted);font-size:13px;margin:0 0 10px">
+        OTA 只把新内核写进 SSD 的 <code>/boot</code>，u-boot 却只从 eMMC 引导分区读内核。
+        开启监视后每 <b>20 秒</b>比对一次，新内核落地 20 秒内就被搬过去，赶在系统自动重启之前。
+        内核刚写完的 3 秒内不会动它，确保搬的是完整文件而不是写了一半的。
+      </p>
+      ${holding?`<p style="color:var(--text);font-size:12.5px;margin:0 0 10px;padding:9px 11px;border-radius:9px;background:var(--panel-2);border:1px solid var(--accent)">
+        升级窗口内守护<b>不挂载、不写入</b>引导分区，把 eMMC 完整让给升级程序；<br>
+        升级结束、关机或重启前仍会自动补一次同步。
+      </p>`:(w.active?`<p style="color:var(--muted);font-size:12.5px;margin:0 0 10px;padding:9px 11px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line)">
+        监视已就绪，现在可以去系统设置点升级。检测到包管理器启动或 <code>/boot</code> 开始变化时，才会切换成「让路」；
+        没在升级时照常每 20 秒比对一次，不会空转。
+      </p>`:'')}
+      <div class="kv">
+        <div class="k">当前状态</div><div class="v">${holding?'<span class="pill warn">升级中 · 已让路</span>':(w.active?'<span class="pill ok">已就绪 · 等待升级</span> 没检测到升级动作，照常巡检':'<span class="pill ok">监视中</span> 每 20 秒检查一次')}</div>
+        <div class="k">已自动同步</div><div class="v">${holding?'<span class="pill mute">窗口内已暂停</span>':(w.active?(w.hits||0)+' 次':'—')}</div>
+        <div class="k">已让路</div><div class="v">${w.yielding?((win.yields||0)+' 次 <span class="pill mute" style="margin-left:6px">进行中</span>'):((ota.count||0)?('<span class="pill mute">上次升级 '+(ota.count||0)+' 次</span>'):'—')}</div>
+        <div class="k">开始时间</div><div class="v">${esc(w.since||'—')}</div>
+        ${res.state?`<div class="k">上次升级</div><div class="v">
+          <span class="pill ${res.state==='success'?'ok':(res.state==='failed'?'warn':'mute')}">${resLabel}</span>
+          ${(res.version_before&&res.version_after)?`<span class="pill mute" style="margin-left:6px">${esc(res.version_before)} → ${esc(res.version_after)}</span>`:''}
+        </div>`:''}
+      </div>
+      ${res.state==='failed'?`<p style="color:var(--muted);font-size:12.5px;margin:10px 0 0;padding:9px 11px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line)">
+        ${esc(res.note||'系统版本没有变化，这次升级没有生效。')}
+        ${res.fail_pkg?`<br>升级器原话：<code>${esc(res.fail_line||('failed to install \''+res.fail_pkg+'\''))}</code>`:''}
+        ${res.has_report?'<br>现场已归档，点下面的按钮导出后发我。':'<br>（窗口太短，没有采集现场；下次请让升级跑到报错为止。）'}
+      </p>`:''}
+      <div class="row" style="margin-top:14px">
+        ${w.active
+          ? `${holding?`<span class="pill warn">升级进行中 · 不需要操作</span>`:''}
+             <button class="btn ghost" onclick="stopWatch(${holding?1:0})">${holding?'结束窗口':'结束监视'}</button>`
+          : `<button class="btn" onclick="startWatch()">启动升级守护</button><button class="btn ghost" onclick="fixUpgrade()">一键修复</button>`}
+        ${(rep.exists || res.has_report)?`<button class="btn ghost" onclick="downloadReport(1)">升级现场</button>`:''}
+      </div>
+      ${(w.active && (win.age||0) > 1800 && res.state!=='failed')
+        ? `<p style="color:var(--text);font-size:12.5px;margin:10px 0 0;padding:9px 11px;border-radius:9px;background:var(--panel-2);border:1px solid var(--line)">
+             窗口已经开了 <b>${Math.round((win.age||0)/60)} 分钟</b>。如果这次升级其实没跑（比如只点了启动、没去系统设置点升级），
+             点「结束窗口」清掉它，再重新「启动升级守护」，这样判定和现场才对得上。
+           </p>` : ''}
+      <p class="hint">${w.active
+        ? '升级完成重启后监视会自动结束，不需要回来手动关闭。'
+        : '开关放在 /run，重启后自动结束；6 小时未升级也会自动过期。'}</p>
+    </div>
+
+    <div class="card">
+      <h3>上次同步 <span class="tag">${esc(g.last_sync.reason?({manual:'手动',hook:'apt/dpkg 钩子',timer:'定时巡检',watch:'升级监视',boot:'开机',shutdown:'重启前',install:'安装守护',fix:'一键修复'}[g.last_sync.reason]||g.last_sync.reason):'从未')}</span></h3>
+      <div class="kv">
+        <div class="k">时间</div><div class="v">${esc(g.last_sync.time||'从未')}</div>
+        <div class="k">内核</div><div class="v mono">${esc(g.last_sync.kernelfile||'-')}</div>
+        <div class="k">rootdev</div><div class="v mono">${esc(g.last_sync.root_base? g.last_sync.root_base+'-02':'-')}</div>
+        <div class="k">来源</div><div class="v mono">${esc(g.last_sync.source||'-')}</div>
+        <div class="k">上次重启前</div><div class="v">${up.last_shutdown&&up.last_shutdown.synced
+          ? esc(up.last_shutdown.time||'')+(up.last_shutdown.matches?' <span class="pill ok">kernel 一致</span>':' <span class="pill mute">已被后续升级取代</span>')
+          : '<span class="pill mute">无记录</span>'}</div>
+      </div>
+      <p class="hint">升级请走「系统设置 → 更新和还原」。升级只作用于当前启动的系统分区，数据不受影响。</p>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>升级现场 <span class="tag">${rep.exists?'已归档':'暂无'}</span></h3>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 10px">
+      升级失败时最需要的是现场：分区表、各分区剩余空间、软 RAID 状态、<code>/boot</code> 与 eMMC 内容、
+      dmesg、journald 警告及以上、升级器自己的日志文件。
+      这些都只读采集，<b>不挂载、不写引导分区</b>，升级进行中抓也不影响升级。
+    </p>
+    <div class="kv">
+      <div class="k">报告状态</div><div class="v">${rep.exists
+        ? `<span class="pill ok">已生成</span> <span class="pill mute" style="margin-left:6px">${Math.max(1,Math.round((rep.size||0)/1024))} KB</span>`
+        : '<span class="pill mute">还没生成</span>'}</div>
+      <div class="k">生成时间</div><div class="v">${esc(rep.time||'—')}</div>
+      <div class="k">对应升级</div><div class="v">${res.state
+        ? `<span class="pill ${res.state==='success'?'ok':(res.state==='failed'?'warn':'mute')}">${resLabel}</span>`
+        : (w.active?'<span class="pill mute">窗口进行中，未结算</span>':'<span class="pill mute">无结算记录</span>')}</div>
+      <div class="k">保存位置</div><div class="v" style="display:flex;flex-wrap:wrap;gap:6px;align-items:center">${rep.saved_path
+        ? `<span class="mono" style="font-size:11.5px;word-break:break-all;flex:1 1 160px;min-width:0">${esc(rep.saved_path)}</span>
+           <button class="btn ghost" style="padding:3px 9px;font-size:11.5px;flex:0 0 auto" data-path="${esc(rep.saved_path)}" onclick="copyText(this.dataset.path,this)">复制路径</button>`
+        : '<span class="pill mute">导出时自动保存到存储空间</span>'}</div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn" onclick="downloadReport(true)">${rep.exists?'重新抓取并保存':'立即抓取并保存'}</button>
+      ${rep.exists?`<button class="btn ghost" onclick="downloadReport(1)">重新抓取并导出</button>`:''}
+    </div>
+    <p class="hint">会同时做两件事：浏览器下载一份，并往存储空间（文件管理器里能看到的目录）存一份
+      <code>oesboot-ota-report-时间.txt</code>。窗口进行中抓的是实时快照，升级结束后还会自动再抓一次。</p>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>引导布局修正 <span class="tag">${(i.chain.boot_part===i.chain.loader_part)?'已是最优':'建议修正'}</span></h3>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 10px">
+      这是你「系统升级卡在安装阶段」的根因。OES 的 u-boot <b>永远从 eMMC 引导分区读内核</b>，
+      而你的 <code>/boot</code> 还挂在 SSD 上——OTA 把新内核写进 SSD，u-boot 却读不到，
+      升级器检测到内核没换上，就判定安装失败。修正 = 让 <code>/boot</code> 直接挂到 eMMC 引导分区。
+    </p>
+    <div class="kv">
+      <div class="k">当前 /boot</div><div class="v mono">${esc(i.chain.boot_part||'—')}</div>
+      <div class="k">u-boot 读取</div><div class="v mono">${esc(i.chain.loader_part||'—')}</div>
+      <div class="k">是否一致</div><div class="v">${(i.chain.boot_part===i.chain.loader_part)?'<span class="pill ok">一致，已免切换</span>':'<span class="pill warn">不一致，需修正</span>'}</div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      ${(i.chain.boot_part===i.chain.loader_part)
+        ? `<span class="pill ok">布局已就绪，可直接去升级</span>`
+        : `<button class="btn" onclick="doHybrid()">修正引导布局</button>
+           <button class="btn ghost" onclick="doHybridRollback()">回滚上次修正</button>`}
+    </div>
+    <p class="hint">修正会备份 fstab 与两侧 fnEnv、把当前内核复制到 eMMC、改挂载配置，重启后生效；失败或想还原可一键回滚。执行前建议先「抓取现场」留底。</p>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>自动同步的四个触发点 <span class="tag">任一生效即可</span></h3>
+    <div class="chk-list">
+      <div class="chk">${dot(hk.apt||hk.dpkg)}<div class="txt"><b>内核包安装完成时</b>
+        <span>apt / dpkg 钩子${(hk.apt||hk.dpkg)?'已安装':'缺失'}，OTA 装完内核立刻同步</span></div></div>
+      <div class="chk">${dot(hk.watch)}<div class="txt"><b>升级期间每 20 秒</b>
+        <span>升级窗口内对引导分区零写入，完完整整让给升级程序；窗口结束、关机或下次开机时补同步</span></div></div>
+      <div class="chk">${dot(hk.shutdown)}<div class="txt"><b>重启前的最后一刻</b>
+        <span>关机同步单元挂在 shutdown.target，OTA 自动重启也会先跑它</span></div></div>
+      <div class="chk">${dot(hk.boot)}<div class="txt"><b>下一次开机</b>
+        <span>开机时再校一次；若启动到了 eMMC，会按策略自动切回 SSD</span></div></div>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>升级守护 <span class="tag">${g.installed? (g.enabled?'已启用':'已安装未启用') : '未安装'}</span></h3>
+    <div class="switch">
+      <div><div class="t">启用守护</div><div class="d">关闭后不会自动同步，升级后可能无法启动。</div></div>
+      <button class="toggle ${g.enabled?'on':''}" onclick="setPolicy({enabled:${g.enabled?'false':'true'}})"></button>
+    </div>
+    <div class="switch">
+      <div><div class="t">锁定启动盘</div><div class="d">锁定后，即使引导被改写回 eMMC，守护也会自动改回并重启。</div></div>
+      <select class="sel-lock" onchange="setPolicy({lock:this.value})">
+        <option value="follow" ${lockVal==='follow'?'selected':''}>跟随当前系统</option>
+        <option value="ssd" ${lockVal==='ssd'?'selected':''}>锁定 SSD</option>
+        <option value="emmc" ${lockVal==='emmc'?'selected':''}>锁定 eMMC</option>
+      </select>
+    </div>
+    <div class="switch">
+      <div><div class="t">失败自动回切</div><div class="d">意外启动到 eMMC 时，用 SSD 的启动分区反向修复 eMMC 引导。</div></div>
+      <button class="toggle ${g.auto_repair?'on':''}" onclick="setPolicy({auto_repair:${g.auto_repair?'false':'true'}})"></button>
+    </div>
+    <div class="switch">
+      <div><div class="t">修复后自动重启</div><div class="d">修复成功后自动重启进入 SSD（最多连续 2 次，防止死循环）。</div></div>
+      <button class="toggle ${g.auto_reboot?'on':''}" onclick="setPolicy({auto_reboot:${g.auto_reboot?'false':'true'}})"></button>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn ghost" onclick="doSync()" ${holding?'disabled title="升级窗口内不碰引导分区"':''}>立即同步一次</button>
+      <button class="btn ghost" onclick="doRepair()">修复引导</button>
+      <button class="btn ghost" onclick="installGuard()">重新部署守护</button>
+    </div>
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>守护日志 <span class="tag">最近 ${(g.log_tail||[]).length} 行</span></h3>
+    <div class="log">${esc((g.log_tail||[]).join('\n') || '暂无日志')}</div>
+  </div>`;
+}
+
+/* ---------------- 系统转移 ---------------- */
+function renderMigrate(){
+  const i = state.info; if(!i) return;
+  const candidates = i.disks.filter(d=>!d.is_system && !d.emmc && !d.partitions.some(p=>p.mount));
+  const currentIsSSD = !i.chain.root_on_emmc;
+  $('#view-migrate').innerHTML = `
+  <div class="card">
+    <h3>系统转移 <span class="tag">克隆当前系统到另一块盘</span></h3>
+    <p style="color:var(--muted);font-size:13px;margin:0 0 10px">
+      将当前运行的 fnOS 克隆到目标盘：新建 GPT 分区表（启动分区 FAT32 + 根分区 btrfs）、
+      rsync 全量复制、改写 fstab 与 fnEnv.txt、并把引导指向新盘。
+      目标盘上原有数据将被清空，请先备份。
+    </p>
+    ${currentIsSSD?`<div class="issue" style="margin-bottom:12px"><div class="bar" style="background:var(--warn)"></div>
+      <div><b>当前已运行在 SSD</b><span>通常无需再次转移。若确需迁到另一块盘，请继续操作；迁移后引导会指向新盘。</span></div></div>`:''}
+    ${candidates.length? `
+      <div class="kv wide">
+        <div class="k">目标磁盘</div>
+        <div><select id="mig-disk">${candidates.map(d=>`<option value="${esc(d.path)}">${esc(d.path)} · ${esc(d.model||'未知')} · ${esc(d.size_text)}</option>`).join('')}</select></div>
+        <div class="k">根分区容量</div>
+        <div><input type="text" id="mig-size" placeholder="留空=使用整盘（例如 64）"><div class="hint">单位 GB。留空会把整块盘作为系统盘；填写则剩余空间留作以后建存储空间。</div></div>
+      </div>
+      <div class="row" style="margin-top:14px">
+        <button class="btn danger" onclick="confirmMigrate()">开始迁移</button>
+      </div>` : `<div class="empty">没有可用的目标磁盘：需要一块未挂载、非系统盘、非 eMMC 的磁盘。</div>`}
+  </div>
+
+  <div class="card" style="margin-top:14px">
+    <h3>当前启动盘切换</h3>
+    <div class="kv">
+      <div class="k">运行位置</div><div class="v">${i.chain.root_on_emmc?'eMMC':'SSD'}（${esc(i.chain.root_dev)}）</div>
+      <div class="k">可选目标</div><div class="v">${cardText(i)}</div>
+    </div>
+    <div class="row" style="margin-top:14px">
+      <button class="btn ghost" onclick="confirmSwitch('${i.chain.root_on_emmc?'ssd':'emmc'}')">
+        切换启动到 ${i.chain.root_on_emmc?'SSD':'eMMC'}</button>
+      <button class="btn ghost" onclick="doReboot()">重启设备</button>
+    </div>
+    <p class="hint">切换会同时改写引导分区的 fnEnv.txt，并在重启后生效。切换前请确认目标系统能正常启动。</p>
+  </div>`;
+}
+
+function cardText(i){
+  const list = [];
+  for(const d of i.disks){ for(const p of d.partitions){ if(p.role==='fnos-root' && p.path!==i.chain.root_dev) list.push(p.path+(p.version?' (v'+p.version+')':'')); } }
+  return list.length? list.map(esc).join('，') : '没有其他已安装 fnOS 的磁盘';
+}
+
+/* ---------------- 诊断 ---------------- */
+async function renderDiag(){
+  const i = state.info; if(!i) return;
+  if(!state.diag){ try{ state.diag = await get('diagnose'); }catch(e){ state.diag='读取失败: '+e.message; } }
+  $('#view-diag').innerHTML = `
+  <div class="card">
+    <h3>诊断报告 <span class="tag">可复制给他人排错</span></h3>
+    <div class="row" style="margin-bottom:10px">
+      <button class="btn ghost" onclick="state.diag='';renderDiag()">重新生成</button>
+      <button class="btn ghost" onclick="downloadDiag()">下载 .txt</button>
+      <button class="btn ghost" onclick="copyDiag(this)">复制</button>
+      <button class="btn" onclick="downloadReport(true)">抓取升级现场</button>
+    </div>
+    <pre class="report">${esc(state.diag)}</pre>
+  </div>`;
+}
+function downloadDiag(){
+  const blob = new Blob([state.diag], {type:'text/plain;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = 'oesboot-diagnose.txt'; a.click();
+}
+async function copyDiag(btn){
+  try{ await navigator.clipboard.writeText(state.diag); btn.textContent='已复制'; setTimeout(()=>btn.textContent='复制',1500);}catch(e){ alert('复制失败，请手动选择文本'); }
+}
+
+/* ---------------- 动作 ---------------- */
+function toast(msg){
+  const b=$('#banner'); b.className='banner live';
+  b.innerHTML=`<div class="dot" style="background:var(--accent)"></div><div><h2>${esc(msg)}</h2></div>`;
+  setTimeout(()=>{ refresh(); }, 2200);
+}
+
+async function startWatch(){
+  try{
+    await post('upgrade/watch', {action:'start'});
+    await refresh();
+    toast('升级守护已启动 —— 现在去系统设置点升级即可');
+  }catch(e){ alert(e.message); }
+}
+async function stopWatch(inWindow){
+  const msg = inWindow
+    ? '结束这个升级窗口？\n\n如果刚才并没有真的在升级（比如只点了启动没去点升级），点确定清掉它，然后重新「启动升级守护」再升级——这样判定和现场才准。'
+    : '结束升级监视？结束后新内核不会自动同步，需手动点「立即同步」。';
+  if(!confirm(msg)) return;
+  try{ await post('upgrade/watch', {action:'stop'}); await refresh(); }catch(e){ alert(e.message); }
+}
+async function fixUpgrade(){
+  try{ const job = await post('upgrade/fix'); openJob(job); }catch(e){ alert(e.message); }
+}
+async function copyText(t, btn){
+  try{
+    await navigator.clipboard.writeText(t);
+    if(btn){ const o=btn.textContent; btn.textContent='已复制'; setTimeout(()=>btn.textContent=o,1500); }
+  }catch(e){ alert(t); }
+}
+
+async function downloadReport(build){
+  // 一律重新抓取：报告是现场快照，点它就是要"现在"的状态。
+  // 以前只在文件不存在时才 build，结果「导出升级现场」给出的
+  // 是上一次生成的那份（14:49 导出到 14:35 的内容），排查时会被误导。
+  const url = API_BASE + 'api/ota-report?save=1&build=1';
+  try{
+    toast('正在抓取现场，几秒后自动保存…');
+    const r = await fetch(url, {cache:'no-store'});
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || '生成升级现场失败');
+    // 先触发浏览器下载（手机/电脑都能拿到一份）
+    const a = document.createElement('a');
+    a.href = API_BASE + 'api/ota-report?download';
+    a.download = '';
+    document.body.appendChild(a); a.click(); a.remove();
+    const s = j.saved || {};
+    if(s.ok){
+      toast('已保存到 ' + s.dir + ' 文件夹，文件名 ' + s.name);
+    }else{
+      alert('现场已生成，但没能写入存储空间：' + (s.error||'未知原因') + '\n\n浏览器下载的那份仍然可用。');
+    }
+    setTimeout(refresh, 1200);
+  }catch(e){ alert(e.message); }
+}
+
+async function doDpkgFix(){
+  if(!confirm('确认修复 dpkg 配置？\n\n会把损坏的 /etc/dpkg/dpkg.cfg.d 钩子撤掉，重装为 dpkg 能接受的写法。\n不需要重启，修完直接去系统设置点升级即可。')) return;
+  try{ const job = await post('dpkgfix', {}); openJob(job); }catch(e){ alert(e.message); }
+}
+async function doHybrid(){
+  if(!confirm('确认修正引导布局？\n\n这会改动 /etc/fstab 和引导分区配置，重启后生效。\n执行前会自动备份，之后可「回滚」还原。\n\n建议先点「立即抓取并保存」留一份现场。')) return;
+  try{ const job = await post('hybrid', {confirm:'HYBRID'}); openJob(job); }catch(e){ alert(e.message); }
+}
+async function doHybridRollback(){
+  if(!confirm('确认回滚到修正前的引导布局？回滚后重启生效。')) return;
+  try{ const job = await post('hybrid-rollback', {confirm:'HYBRID'}); openJob(job); }catch(e){ alert(e.message); }
+}
+
+async function doSync(){ try{ const job = await post('sync'); openJob(job); }catch(e){ alert(e.message); } }
+async function doRepair(){ try{ const job = await post('repair'); openJob(job); }catch(e){ alert(e.message); } }
+async function installGuard(){ try{ const r = await post('guard/install'); alert('守护已重新部署：\n' + r.map(x=>x.target+' '+(x.ok?'OK':'跳过')+' '+x.note).join('\n')); refresh(); }catch(e){ alert(e.message); } }
+async function setPolicy(p){ try{ await post('policy', p); await refresh(); }catch(e){ alert(e.message); } }
+async function doReboot(){ if(!confirm('确定要重启设备吗？')) return; try{ await post('reboot',{}); toast('正在重启…'); }catch(e){ alert(e.message); } }
+
+function confirmSwitch(target){
+  const name = target==='ssd'?'SSD':'eMMC';
+  modal(`
+    <h3>切换启动盘到 ${name}</h3>
+    <p>将把引导分区的 fnEnv.txt 指向 ${name} 上的系统，并锁定启动盘。重启后生效。</p>
+    <ul>
+      <li>目标系统的内核文件必须仍然存在于启动分区，否则可能无法启动（本操作会先校验）。</li>
+      <li>切换后如出现问题，可在本页切回，或长按电源重启后由守护自动回切。</li>
+    </ul>
+    <p>请输入 <code>${target.toUpperCase()}</code> 确认：</p>
+    <input type="text" id="switch-confirm" placeholder="${target.toUpperCase()}">
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn" onclick="switchGo('${target}')">确认切换</button>
+    </div>`);
+}
+async function switchGo(target){
+  const val = ($('#switch-confirm').value||'').trim();
+  if(val !== target.toUpperCase()) return alert('确认字符串不匹配');
+  closeModal();
+  try{ const job = await post('switch', {target, confirm: target}); openJob(job); }catch(e){ alert(e.message); }
+}
+
+function confirmMigrate(){
+  const disk = $('#mig-disk').value;
+  const size = $('#mig-size').value.trim();
+  modal(`
+    <h3>迁移系统到 ${esc(disk)}</h3>
+    <p><b>${esc(disk)}</b> 上的分区表将被重建，原有数据会全部丢失。请确认该盘没有需要保留的数据。</p>
+    <ul>
+      <li>过程：分区 → 格式化 → rsync 克隆 → 改写 fstab / fnEnv → 引导指向新盘。</li>
+      <li>克隆期间请勿断电；失败时系统仍从原盘启动，不会直接变砖。</li>
+      <li>迁移完成后需要重启，才会从新盘运行。</li>
+    </ul>
+    <p>请输入 <code>MIGRATE</code> 确认：</p>
+    <input type="text" id="mig-confirm" placeholder="MIGRATE">
+    <div class="row" style="margin-top:14px;justify-content:flex-end">
+      <button class="btn ghost" onclick="closeModal()">取消</button>
+      <button class="btn danger" onclick="migrateGo('${esc(disk)}','${esc(size)}')">开始迁移</button>
+    </div>`);
+}
+async function migrateGo(disk, size){
+  const val = ($('#mig-confirm').value||'').trim();
+  if(val !== 'MIGRATE') return alert('确认字符串不匹配');
+  closeModal();
+  try{
+    const job = await post('migrate', {disk, size_gb: size? Number(size): null, confirm:'MIGRATE'});
+    openJob(job);
+  }catch(e){ alert(e.message); }
+}
+
+/* ---------------- 任务弹窗 ---------------- */
+async function openJob(job){
+  const mask = $('#modal'); mask.classList.add('on');
+  const draw = (j) => {
+    $('#modal-body').innerHTML = `
+      <h3>${esc(j.title)}</h3>
+      <div class="prog"><i style="width:${j.progress||0}%"></i></div>
+      <div class="mono" style="color:var(--muted);font-size:12px;margin-bottom:8px">
+        ${j.status==='running'?'执行中':(j.status==='success'?'已完成':'失败')} · ${j.elapsed}s · ${j.progress||0}%</div>
+      <div class="log" style="max-height:320px">${esc(j.steps.map(s=>`[${s.ts}] ${s.msg}`).join('\n'))}</div>
+      <div class="row" style="margin-top:14px;justify-content:flex-end">
+        ${j.status==='running'?'<button class="btn ghost" onclick="closeModal()">后台运行</button>':
+          `<button class="btn ghost" onclick="closeModal();refresh()">关闭</button>`}
+        ${j.status==='success' && (j.result.need_reboot || j.kind==='migrate' || j.kind==='switch')
+          ? '<button class="btn" onclick="doReboot()">立即重启</button>' : ''}
+      </div>`;
+  };
+  draw(job);
+  const timer = setInterval(async ()=>{
+    try{
+      const j = await get('job/' + job.id);
+      draw(j);
+      if(j.status !== 'running'){ clearInterval(timer); refresh(); }
+    }catch(e){ clearInterval(timer); }
+  }, 1200);
+}
+function modal(html){ $('#modal-body').innerHTML = html; $('#modal').classList.add('on'); }
+function closeModal(){ $('#modal').classList.remove('on'); }
+$('#modal').addEventListener('click', e=>{ if(e.target.id==='modal') closeModal(); });
+
+/* ---------------- 框架 ---------------- */
+function switchTab(tab){
+  state.tab = tab;
+  document.querySelectorAll('.tab').forEach(b=>b.classList.toggle('on', b.dataset.tab===tab));
+  document.querySelectorAll('.view').forEach(v=>v.style.display='none');
+  $('#view-'+tab).style.display='';
+  render();
+}
+function render(){
+  renderBanner();
+  if(state.tab==='overview') renderOverview();
+  if(state.tab==='guard') renderGuard();
+  if(state.tab==='migrate') renderMigrate();
+  if(state.tab==='diag') renderDiag();
+  scheduleFast();
+}
+
+/* 监视开启时用轻量接口快刷结论，只重绘 banner，不动列表（避免滚动跳动） */
+let fastTimer = null;
+function scheduleFast(){
+  const on = watchActive() && state.tab==='overview' && !$('#modal').classList.contains('on');
+  if(on && !fastTimer){
+    fastTimer = setInterval(async ()=>{
+      try{
+        state.info.upgrade = await get('upgrade');
+        renderBanner();
+      }catch(e){ /* 单次失败忽略 */ }
+    }, 5000);
+  }else if(!on && fastTimer){
+    clearInterval(fastTimer); fastTimer = null;
+  }
+}
+async function refresh(){
+  try{
+    state.info = await get('status');
+    state.diag = '';
+    render();
+  }catch(e){
+    $('#banner').className='banner err';
+    $('#banner').innerHTML = `<div class="dot" style="background:var(--err)"></div>
+      <div><h2>无法读取设备状态</h2><p>${esc(e.message)}</p></div>`;
+  }
+}
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click', ()=>switchTab(b.dataset.tab)));
+$('#btn-refresh').addEventListener('click', refresh);
+(function(){
+  const h = (location.hash||'').replace('#','');
+  if(['overview','guard','migrate','diag'].includes(h)){ switchTab(h); }
+})();
+refresh();
+setInterval(()=>{ if(state.tab==='overview' && !$('#modal').classList.contains('on')) refresh(); }, 15000);
+</script>
+</body>
+</html>

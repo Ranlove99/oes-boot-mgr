@@ -1,0 +1,18 @@
+#!/bin/bash
+# 卸载后（应用文件已删除）：移除 systemd 单元与守护脚本，仅用 shell 兜底
+set -u
+UNIT_DIR=/etc/systemd/system
+
+for u in oesboot-sync.service oesboot-shutdown-sync.service oesboot-check.timer oesboot-check.service; do
+  systemctl disable "$u" >/dev/null 2>&1 || true
+  systemctl stop "$u" >/dev/null 2>&1 || true
+  rm -f "${UNIT_DIR}/${u}" "${UNIT_DIR}/multi-user.target.wants/${u}" \
+        "${UNIT_DIR}/shutdown.target.wants/${u}" \
+        "${UNIT_DIR}/timers.target.wants/${u}" 2>/dev/null || true
+done
+rm -f /etc/apt/apt.conf.d/99oesboot-sync /etc/dpkg/dpkg.cfg.d/99oesboot-sync 2>/dev/null || true
+rm -f /usr/local/sbin/oes-boot-sync 2>/dev/null || true
+systemctl daemon-reload >/dev/null 2>&1 || true
+
+# 保留 /etc/oesboot.conf 与日志，便于重新安装后恢复判断
+exit 0

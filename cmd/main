@@ -1,0 +1,96 @@
+#!/bin/bash
+# ============================================================
+# OES 系统盘管家 —— 运行控制
+# 用法: main start|stop|status
+#   status 退出码 0=运行中 / 3=未运行（应用中心约定）
+# ============================================================
+set -u
+
+APP_NAME="oesboot"
+APP_DIR="${TRIM_APPDEST:-/var/apps/${APP_NAME}/target}"
+VAR_DIR="${TRIM_PKGVAR:-/var/apps/${APP_NAME}/var}"
+PID_FILE="${VAR_DIR}/app.pid"
+LOG_FILE="${VAR_DIR}/app.log"
+SOCK="${APP_DIR}/app.sock"
+
+PYTHON_BIN=""
+for P in /var/apps/python312/target/bin /usr/bin /usr/local/bin; do
+  if [ -x "$P/python3" ]; then PYTHON_BIN="$P/python3"; break; fi
+done
+[ -z "$PYTHON_BIN" ] && PYTHON_BIN="$(command -v python3 2>/dev/null || true)"
+
+log_msg() { echo "$(date '+%Y-%m-%d %H:%M:%S') - $1" >> "$LOG_FILE" 2>/dev/null || true; }
+
+fail() {
+  echo "$1" > "${TRIM_TEMP_LOGFILE:-/dev/null}" 2>/dev/null || true
+  log_msg "ERROR: $1"
+  exit 1
+}
+
+proc_is_app() {
+  local pid="$1"
+  [ -n "$pid" ] || return 1
+  kill -0 "$pid" 2>/dev/null || return 1
+  tr '\0' ' ' < "/proc/$pid/cmdline" 2>/dev/null | grep -q "server.py"
+}
+
+status_app() {
+  if [ -f "$PID_FILE" ]; then
+    local pid
+    pid="$(head -n 1 "$PID_FILE" | tr -d '[:space:]')"
+    if proc_is_app "$pid"; then return 0; fi
+    rm -f "$PID_FILE"
+  fi
+  return 1
+}
+
+start_app() {
+  if status_app; then return 0; fi
+  [ -n "$PYTHON_BIN" ] || fail "未找到 python3，请先在应用中心安装 Python 运行时（python312）"
+  [ -f "$APP_DIR/server.py" ] || fail "应用文件不完整：$APP_DIR/server.py 缺失"
+  mkdir -p "$VAR_DIR"
+  log_msg "Starting $APP_NAME with $PYTHON_BIN"
+  (
+    cd "$APP_DIR" || exit 1
+    exec nohup "$PYTHON_BIN" "$APP_DIR/server.py" >> "$LOG_FILE" 2>&1
+  ) &
+  echo "$!" > "$PID_FILE"
+
+  local i=0
+  while [ $i -lt 20 ]; do
+    if ! status_app; then break; fi
+    if [ -S "$SOCK" ]; then
+      log_msg "socket ready: $SOCK"
+      return 0
+    fi
+    i=$((i + 1))
+    sleep 0.5
+  done
+  if status_app; then
+    log_msg "start pending: process alive, socket not ready yet"
+    return 0
+  fi
+  fail "服务启动失败，详见 $LOG_FILE"
+}
+
+stop_app() {
+  log_msg "Stopping $APP_NAME"
+  if [ ! -f "$PID_FILE" ]; then return 0; fi
+  local pid
+  pid="$(head -n 1 "$PID_FILE" | tr -d '[:space:]')"
+  if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+    kill -TERM "$pid" 2>/dev/null || true
+    local i=0
+    while kill -0 "$pid" 2>/dev/null && [ $i -lt 15 ]; do sleep 1; i=$((i + 1)); done
+    kill -0 "$pid" 2>/dev/null && kill -KILL "$pid" 2>/dev/null || true
+  fi
+  rm -f "$PID_FILE" "$SOCK"
+  return 0
+}
+
+case "${1:-}" in
+  start)  start_app ;;
+  stop)   stop_app ;;
+  status) if status_app; then exit 0; fi; exit 3 ;;
+  *) echo "Usage: $0 start|stop|status" > "${TRIM_TEMP_LOGFILE:-/dev/null}" 2>/dev/null; exit 1 ;;
+esac

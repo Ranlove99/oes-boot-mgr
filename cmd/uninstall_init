@@ -1,0 +1,8 @@
+#!/bin/bash
+# 卸载前：先做一次引导同步，保证卸载后系统仍能正常启动，再停服务
+set -u
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+/usr/local/sbin/oes-boot-sync sync >/dev/null 2>&1 || true
+"${SCRIPT_DIR}/main" stop
+exit 0
